@@ -62,6 +62,7 @@ func (c *Connector) Setup(controller system.Controller) {
 	}
 
 	log.Debug().Str("id", c.conf.Id).Str("url", c.conf.Url).Msg("Connecting to Zigbee2Mqtt broker...")
+	//c.conn.Subscribe("bridge/info", c.handleDeviceInfo)
 	c.conn.Subscribe("bridge/devices", c.handleNewDeviceList)
 	c.conn.Subscribe("bridge/event", c.handleDeviceEvent)
 	c.conn.Connect()
@@ -173,6 +174,8 @@ func (c *Connector) sendPayload(id device.Id, payload any) {
 
 func (c *Connector) deviceMessageHandler(id device.Id) MessageHandler {
 	return func(msg mqtt.Message) {
+		log.Debug().Str("id", string(id)).Str("topic", msg.Topic()).Str("payload", string(msg.Payload())).Msg("deviceMessageHandler")
+
 		var data map[string]any
 		if err := json.Unmarshal(msg.Payload(), &data); err != nil {
 			log.Error().Str("device", string(id)).Str("payload", string(msg.Payload())).Msg("Could not parse device data")
@@ -182,11 +185,20 @@ func (c *Connector) deviceMessageHandler(id device.Id) MessageHandler {
 		spec, ok := c.availableDevices.Load(id)
 		if !ok {
 			log.Error().Str("device", string(id)).Str("payload", string(msg.Payload())).Msg("Could not process device data for unknown device")
+			return
 		}
 
 		actionDone := false
 		for _, s := range spec.(device.Spec).Sensors {
 			switch s {
+			case device.Humidity:
+				if v := extract[float64](data, "humidity"); v != nil {
+					c.ctrl.DeliverSensorValue(id, s, device.HumiditySensorValue{Humidity: float32(*v)})
+				}
+			case device.Temperature:
+				if v := extract[float64](data, "temperature"); v != nil {
+					c.ctrl.DeliverSensorValue(id, s, device.TemperatureSensorValue{Temperature: float32(*v)})
+				}
 			case device.MotionSensor:
 				if v := extract[bool](data, "occupancy"); v != nil {
 					c.ctrl.DeliverSensorValue(id, s, device.MotionSensorValue{Motion: *v})
@@ -208,11 +220,11 @@ func (c *Connector) deviceMessageHandler(id device.Id) MessageHandler {
 					c.ctrl.DeliverSensorValue(id, s, device.TamperSensorValues{Tamper: *v})
 				}
 			case device.BatteryLevelSensor:
-				if v := extract[int](data, "battery"); v != nil {
+				if v := extract[float64](data, "battery"); v != nil {
 					c.ctrl.DeliverSensorValue(id, s, device.BatteryLevelSensorValue{BatteryLevel: float32(*v) / float32(100)})
 				}
 			case device.LinkQualitySensor:
-				if v := extract[int](data, "linkquality"); v != nil {
+				if v := extract[float64](data, "linkquality"); v != nil {
 					c.ctrl.DeliverSensorValue(id, s, device.LinkQualitySensorValue{LinkQuality: float32(*v) / float32(255)})
 				}
 			case device.ArmingSensor, device.DisarmingSensor, device.PanicSensor:
@@ -249,6 +261,8 @@ func (c *Connector) deviceMessageHandler(id device.Id) MessageHandler {
 }
 
 func (c *Connector) handleDeviceEvent(msg mqtt.Message) {
+	log.Debug().Str("topic", msg.Topic()).Str("payload", string(msg.Payload())).Msg("handleDeviceEvent")
+
 	var deviceEvent DeviceEvent
 	if err := json.Unmarshal(msg.Payload(), &deviceEvent); err != nil {
 		log.Error().Str("payload", string(msg.Payload())).Msg("Could not parse Zigbee device event!")
@@ -262,6 +276,7 @@ func (c *Connector) handleDeviceEvent(msg mqtt.Message) {
 }
 
 func (c *Connector) handleNewDeviceList(msg mqtt.Message) {
+	log.Debug().Str("topic", msg.Topic()).Str("payload", string(msg.Payload())).Msg("handleNewDeviceList")
 
 	var newDevices []Z2MDeviceInfo
 	if err := json.Unmarshal(msg.Payload(), &newDevices); err != nil {
@@ -272,6 +287,7 @@ func (c *Connector) handleNewDeviceList(msg mqtt.Message) {
 	relevantDevices := make(map[string]Z2MDeviceInfo)
 	for _, d := range newDevices {
 		if (d.Type == "EndDevice" || d.Type == "Router") && d.Supported {
+			log.Debug().Str("FriendlyName", d.FriendlyName).Msg("NewDevice")
 			relevantDevices[d.FriendlyName] = d
 		}
 	}
@@ -279,9 +295,11 @@ func (c *Connector) handleNewDeviceList(msg mqtt.Message) {
 	c.availableDevices = sync.Map{}
 
 	for _, d := range relevantDevices {
-		spec := c.specFromDeviceInfo(d)
-		if spec.IsRelevant() {
-			c.availableDevices.Store(spec.Id, spec)
+		if d.InterviewCompleted { // only the device has been interview completed, paired
+			spec := c.specFromDeviceInfo(d)
+			if spec.IsRelevant() {
+				c.availableDevices.Store(spec.Id, spec)
+			}
 		}
 	}
 
@@ -294,6 +312,10 @@ func (c *Connector) handleNewDeviceList(msg mqtt.Message) {
 	})
 
 	c.ctrl.DeviceListUpdated(c)
+}
+
+func (c *Connector) handleDeviceInfo(msg mqtt.Message) {
+	log.Debug().Str("payload", string(msg.Payload())).Str("topic", msg.Topic()).Msg("handleDeviceInfo")
 }
 
 func (c *Connector) specFromDeviceInfo(info Z2MDeviceInfo) device.Spec {
@@ -335,7 +357,9 @@ func (c *Connector) specFromDeviceInfo(info Z2MDeviceInfo) device.Spec {
 
 	if wslice.ContainsAll(exposes, []string{"battery"}) {
 		spec.Sensors = append(spec.Sensors, device.BatteryLevelSensor)
-	} else if wslice.ContainsAll(exposes, []string{"battery_low"}) {
+	}
+
+	if wslice.ContainsAll(exposes, []string{"battery_low"}) {
 		spec.Sensors = append(spec.Sensors, device.BatteryWarningSensor)
 	}
 
@@ -345,6 +369,14 @@ func (c *Connector) specFromDeviceInfo(info Z2MDeviceInfo) device.Spec {
 
 	if wslice.ContainsAll(exposes, []string{"linkquality"}) {
 		spec.Sensors = append(spec.Sensors, device.LinkQualitySensor)
+	}
+
+	if wslice.ContainsAll(exposes, []string{"humidity"}) {
+		spec.Sensors = append(spec.Sensors, device.Humidity)
+	}
+
+	if wslice.ContainsAll(exposes, []string{"temperature"}) {
+		spec.Sensors = append(spec.Sensors, device.Temperature)
 	}
 
 	return spec

@@ -17,6 +17,8 @@ const (
 	LinkQualitySensor    Sensor = "link-quality"
 	ArmingSensor         Sensor = "arming"
 	DisarmingSensor      Sensor = "disarming"
+	Humidity             Sensor = "humidity"
+	Temperature          Sensor = "temperature"
 )
 
 type MotionSensorValue struct {
@@ -49,6 +51,14 @@ type BatteryLevelSensorValue struct {
 
 type LinkQualitySensorValue struct {
 	LinkQuality float32
+}
+
+type HumiditySensorValue struct {
+	Humidity float32
+}
+
+type TemperatureSensorValue struct {
+	Temperature float32
 }
 
 type ArmingSensorValue struct {

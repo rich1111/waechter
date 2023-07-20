@@ -1,0 +1,1 @@
+env CGO_ENABLED=1 GOOS=linux GOARCH=arm CC=/home/irich678/target/Work3/openwrt-seed/openwrt/staging_dir/toolchain-arm_cortex-a7+neon-vfpv4_gcc-8.4.0_glibc_eabi/bin/arm-openwrt-linux-gcc go build -trimpath -ldflags "-s -w"

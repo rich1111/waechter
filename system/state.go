@@ -20,8 +20,8 @@ type State struct {
 
 func loadState() State {
 	var state State
-	state.ArmMode = arm.Disarmed
-	state.Alarm = alarm.None
+	state.ArmMode = arm.Perimeter
+	state.Alarm = alarm.Burglar
 
 	filename := path.Join(config.Dir(), "state")
 	data, err := os.ReadFile(filename)

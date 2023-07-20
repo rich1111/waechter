@@ -25,6 +25,16 @@ func DeviceFromConfig(config config.DeviceConfig) Device {
 	}
 }
 
+func NewDevice(id Id) Device {
+	return Device{
+		Id:     Id(id),
+		Zone:   zone.Id("any"),
+		Active: false,
+		Spec:   Spec{},
+		State:  map[Sensor]any{},
+	}
+}
+
 func DInfo(device *Device) *zerolog.Event {
 	if device != nil {
 		return appendDeviceInfo(*device, log.Info())

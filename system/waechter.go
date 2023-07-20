@@ -2,6 +2,7 @@ package system
 
 import (
 	"bufio"
+	"fmt"
 	"github.com/mtrossbach/waechter/internal/config"
 	"github.com/mtrossbach/waechter/internal/log"
 	"github.com/mtrossbach/waechter/internal/wslice"
@@ -115,10 +116,15 @@ func (w *Waechter) loadZones() {
 
 func (w *Waechter) loadDevices() {
 	w.devices = make(map[device.Id]*device.Device)
-	for _, dc := range config.Devices() {
-		d := device.DeviceFromConfig(dc)
-		w.devices[d.Id] = &d
-	}
+	/*
+		// device list not from config file, by Jack Chen
+
+		for _, dc := range config.Devices() {
+			d := device.DeviceFromConfig(dc)
+			w.devices[d.Id] = &d
+		}
+
+	*/
 	w.devices[systemDeviceId] = systemDevice()
 }
 
@@ -136,6 +142,8 @@ func (w *Waechter) deviceConnectorForId(id string) DeviceConnector {
 }
 
 func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value any) bool {
+	log.Debug().Str("id", string(id)).Str("sensor", string(sensor)).Msg("DeliverSensorValue")
+
 	oldValue := w.devices[id].State[sensor]
 	w.devices[id].State[sensor] = value
 
@@ -146,6 +154,7 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 	z := w.zoneForDeviceId(id)
 
 	if v, ok := value.(device.MotionSensorValue); ok {
+		fmt.Printf("Motion Sensor %v\n", v.Motion)
 		if z.Armed && v.Motion {
 			if !(w.isDuringExitDelay()) {
 				w.alarm(id, alarm.Burglar, z.Delayed)
@@ -153,6 +162,7 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 		}
 
 	} else if v, ok := value.(device.ContactSensorValue); ok {
+		fmt.Printf("Contact Sensor %v\n", v.Contact)
 		if z.Armed && !v.Contact {
 			if !(w.isDuringExitDelay()) {
 				w.alarm(id, alarm.Burglar, z.Delayed)
@@ -160,21 +170,25 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 		}
 
 	} else if v, ok := value.(device.SmokeSensorValue); ok {
+		fmt.Printf("Smoke Sensor %v\n", v.Smoke)
 		if v.Smoke {
 			w.alarm(id, alarm.Fire, false)
 		}
 
 	} else if v, ok := value.(device.PanicSensorValue); ok {
+		fmt.Printf("Panic Sensor %v\n", v.Panic)
 		if v.Panic {
 			w.alarm(id, alarm.Panic, false)
 		}
 
 	} else if v, ok := value.(device.BatteryWarningSensorValue); ok {
+		fmt.Printf("Battery Low Warning %v\n", v.BatteryWarning)
 		if v.BatteryWarning {
 			w.noteMgr.NotifyLowBattery(w.specForDeviceId(id), w.zoneForDeviceId(id), 0)
 		}
 
 	} else if v, ok := value.(device.TamperSensorValues); ok {
+		fmt.Printf("Tamper Sensor %v\n", v.Tamper)
 		if v.Tamper {
 			if (z.Armed && config.General().TamperAlarmWhileArmed) || (!z.Armed && config.General().TamperAlarmWhileDisarmed) {
 				w.alarm(id, alarm.Tamper, false)
@@ -182,14 +196,22 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 		}
 
 	} else if v, ok := value.(device.BatteryLevelSensorValue); ok {
+		fmt.Printf("Battery Value %f\n", v.BatteryLevel)
 		if v.BatteryLevel < config.General().BatteryThreshold {
 			w.noteMgr.NotifyLowBattery(w.specForDeviceId(id), w.zoneForDeviceId(id), v.BatteryLevel)
 		}
 
 	} else if v, ok := value.(device.LinkQualitySensorValue); ok {
+		fmt.Printf("Link Quality Value %f\n", v.LinkQuality)
 		if v.LinkQuality < config.General().LinkQualityThreshold {
 			w.noteMgr.NotifyLowLinkQuality(w.specForDeviceId(id), w.zoneForDeviceId(id), v.LinkQuality)
 		}
+
+	} else if v, ok := value.(device.HumiditySensorValue); ok {
+		fmt.Printf("Humidity Value %f\n", v.Humidity)
+
+	} else if v, ok := value.(device.TemperatureSensorValue); ok {
+		fmt.Printf("Temperature Value %f\n", v.Temperature)
 
 	} else if v, ok := value.(device.ArmingSensorValue); ok {
 		if v.ArmMode == arm.Disarmed {
@@ -337,15 +359,20 @@ func (w *Waechter) SystemState() State {
 	return w.state
 }
 
-func (w *Waechter) DeviceListUpdated(system DeviceConnector) {
-	if system == nil {
+func (w *Waechter) DeviceListUpdated(connector DeviceConnector) {
+	if connector == nil {
 		return
 	}
-	deviceSpecs := system.EnumerateDevices()
-	log.Info().Str("connector", system.DisplayName()).Str("id", system.Id()).Msg("Received new device list:")
+	deviceSpecs := connector.EnumerateDevices()
+	log.Info().Str("connector", connector.DisplayName()).Str("id", connector.Id()).Msg("Received new device list:")
 	for _, s := range deviceSpecs {
 		if ad, ok := w.devices[s.Id]; ok {
 			ad.Spec = s
+		} else {
+			// not existing device, new it, by Jack Chen
+			d := device.NewDevice(s.Id)
+			w.devices[d.Id] = &d
+			w.devices[d.Id].Spec = s
 		}
 		var sensors []string
 		var actors []string
@@ -358,10 +385,10 @@ func (w *Waechter) DeviceListUpdated(system DeviceConnector) {
 		log.Info().Str("id", string(s.Id)).Str("displayName", s.DisplayName).Str("vendor", s.Vendor).Str("model", s.Model).Strs("sensors", sensors).Strs("actors", actors).Msg("\t- Device detected")
 	}
 
-	log.Info().Str("connector", system.DisplayName()).Msg("Trying to activate devices")
+	log.Info().Str("connector", connector.DisplayName()).Msg("Trying to activate devices")
 	for _, d := range w.devices {
-		if !d.Active && d.Id.Prefix() == system.Id() {
-			err := system.ActivateDevice(d.Id)
+		if !d.Active && d.Id.Prefix() == connector.Id() {
+			err := connector.ActivateDevice(d.Id)
 			if err != nil {
 				device.DError(d).Err(err).Msg("✗ Could not activate device")
 			} else {
@@ -369,7 +396,7 @@ func (w *Waechter) DeviceListUpdated(system DeviceConnector) {
 			}
 		}
 	}
-	log.Info().Str("connector", system.DisplayName()).Msg("Done with activating devices")
+	log.Info().Str("connector", connector.DisplayName()).Msg("Done with activating devices")
 }
 
 func (w *Waechter) OperationalStateChanged(connector DeviceConnector) {
