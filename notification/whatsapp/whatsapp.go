@@ -130,7 +130,7 @@ func (w *WhatsApp) NotifyRecovery(person config.Person, systemName string, devic
 	return err == nil
 }
 
-func (w *WhatsApp) NotifyLowBattery(person config.Person, systemName string, device device.Spec, zone zone.Zone, batteryLevel float32) bool {
+func (w *WhatsApp) NotifyBatteryLevel(person config.Person, systemName string, device device.Spec, zone zone.Zone, batteryLevel float32) bool {
 	err := w.send(person.WhatsApp, w.config.TemplateNotification, person.Lang, []string{
 		systemName, device.HumanReadableName(), i18n.Translate(person.Lang, i18n.WALowBattery),
 	})
@@ -138,12 +138,45 @@ func (w *WhatsApp) NotifyLowBattery(person config.Person, systemName string, dev
 	return err == nil
 }
 
-func (w *WhatsApp) NotifyLowLinkQuality(person config.Person, systemName string, device device.Spec, zone zone.Zone, quality float32) bool {
+func (w *WhatsApp) NotifyLinkQuality(person config.Person, systemName string, device device.Spec, zone zone.Zone, quality float32) bool {
 	err := w.send(person.WhatsApp, w.config.TemplateNotification, person.Lang, []string{
 		systemName, device.HumanReadableName(), i18n.Translate(person.Lang, i18n.WALowLinkQuality),
 	})
 
 	return err == nil
+}
+
+func (s *WhatsApp) NotifyDeviceAvailable(person config.Person, systemName string, device device.Spec, zone zone.Zone) bool {
+	return true
+}
+
+func (s *WhatsApp) NotifyDeviceUnAvailable(person config.Person, systemName string, device device.Spec, zone zone.Zone) bool {
+	return true
+}
+
+func (w *WhatsApp) NotifyHumidityValue(person config.Person, systemName string, device device.Spec, zone zone.Zone, humidity float32) bool {
+
+	return true
+}
+
+func (w *WhatsApp) NotifyTemperatureValue(person config.Person, systemName string, device device.Spec, zone zone.Zone, temperature float32) bool {
+
+	return true
+}
+
+func (w *WhatsApp) NotifyMotionSensor(person config.Person, systemName string, device device.Spec, zone zone.Zone, motion bool) bool {
+
+	return true
+}
+
+func (w *WhatsApp) NotifyContactSensor(person config.Person, systemName string, device device.Spec, zone zone.Zone, contact bool) bool {
+
+	return true
+}
+
+func (w *WhatsApp) NotifySmokeSensor(person config.Person, systemName string, device device.Spec, zone zone.Zone, smoke bool) bool {
+
+	return true
 }
 
 func (w *WhatsApp) NotifyAutoArm(person config.Person, systemName string) bool {

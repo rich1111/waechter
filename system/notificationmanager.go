@@ -51,15 +51,57 @@ func (n *notificationManager) NotifyRecovery(device device.Spec, zone zone.Zone)
 	})
 }
 
-func (n *notificationManager) NotifyLowBattery(device device.Spec, zone zone.Zone, batteryLevel float32) {
+func (n *notificationManager) NotifyDeviceAvailable(device device.Spec, zone zone.Zone) {
 	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
-		return adapter.NotifyLowBattery(person, config.General().Name, device, zone, batteryLevel)
+		return adapter.NotifyRecovery(person, config.General().Name, device, zone)
 	})
 }
 
-func (n *notificationManager) NotifyLowLinkQuality(device device.Spec, zone zone.Zone, quality float32) {
+func (n *notificationManager) NotifyDeviceUnAvailable(device device.Spec, zone zone.Zone) {
 	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
-		return adapter.NotifyLowLinkQuality(person, config.General().Name, device, zone, quality)
+		return adapter.NotifyRecovery(person, config.General().Name, device, zone)
+	})
+}
+
+func (n *notificationManager) NotifyBatteryLevel(device device.Spec, zone zone.Zone, batteryLevel float32) {
+	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
+		return adapter.NotifyBatteryLevel(person, config.General().Name, device, zone, batteryLevel)
+	})
+}
+
+func (n *notificationManager) NotifyLinkQuality(device device.Spec, zone zone.Zone, quality float32) {
+	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
+		return adapter.NotifyLinkQuality(person, config.General().Name, device, zone, quality)
+	})
+}
+
+func (n *notificationManager) NotifyHumidityValue(device device.Spec, zone zone.Zone, humidity float32) {
+	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
+		return adapter.NotifyHumidityValue(person, config.General().Name, device, zone, humidity)
+	})
+}
+
+func (n *notificationManager) NotifyTemperatureValue(device device.Spec, zone zone.Zone, temperature float32) {
+	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
+		return adapter.NotifyTemperatureValue(person, config.General().Name, device, zone, temperature)
+	})
+}
+
+func (n *notificationManager) NotifyMotionSensor(device device.Spec, zone zone.Zone, motion bool) {
+	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
+		return adapter.NotifyMotionSensor(person, config.General().Name, device, zone, motion)
+	})
+}
+
+func (n *notificationManager) NotifyContactSensor(device device.Spec, zone zone.Zone, contact bool) {
+	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
+		return adapter.NotifyContactSensor(person, config.General().Name, device, zone, contact)
+	})
+}
+
+func (n *notificationManager) NotifySmokeSensor(device device.Spec, zone zone.Zone, smoke bool) {
+	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
+		return adapter.NotifySmokeSensor(person, config.General().Name, device, zone, smoke)
 	})
 }
 
