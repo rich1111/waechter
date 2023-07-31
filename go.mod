@@ -6,8 +6,10 @@ require (
 	github.com/creasty/defaults v1.7.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/nicksnyder/go-i18n/v2 v2.2.1
+	github.com/weekaung/sparkplugb-client v0.0.0-20230609021422-1da7995486d7
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/text v0.11.0
+	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

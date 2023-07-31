@@ -155,6 +155,7 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 
 	if v, ok := value.(device.MotionSensorValue); ok {
 		fmt.Printf("Motion Sensor %v\n", v.Motion)
+		w.noteMgr.NotifyMotionSensor(w.specForDeviceId(id), w.zoneForDeviceId(id), v.Motion)
 		if z.Armed && v.Motion {
 			if !(w.isDuringExitDelay()) {
 				w.alarm(id, alarm.Burglar, z.Delayed)
@@ -163,6 +164,7 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 
 	} else if v, ok := value.(device.ContactSensorValue); ok {
 		fmt.Printf("Contact Sensor %v\n", v.Contact)
+		w.noteMgr.NotifyContactSensor(w.specForDeviceId(id), w.zoneForDeviceId(id), v.Contact)
 		if z.Armed && !v.Contact {
 			if !(w.isDuringExitDelay()) {
 				w.alarm(id, alarm.Burglar, z.Delayed)
@@ -171,6 +173,7 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 
 	} else if v, ok := value.(device.SmokeSensorValue); ok {
 		fmt.Printf("Smoke Sensor %v\n", v.Smoke)
+		w.noteMgr.NotifySmokeSensor(w.specForDeviceId(id), w.zoneForDeviceId(id), v.Smoke)
 		if v.Smoke {
 			w.alarm(id, alarm.Fire, false)
 		}
@@ -184,7 +187,7 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 	} else if v, ok := value.(device.BatteryWarningSensorValue); ok {
 		fmt.Printf("Battery Low Warning %v\n", v.BatteryWarning)
 		if v.BatteryWarning {
-			w.noteMgr.NotifyLowBattery(w.specForDeviceId(id), w.zoneForDeviceId(id), 0)
+			w.noteMgr.NotifyBatteryLevel(w.specForDeviceId(id), w.zoneForDeviceId(id), 0)
 		}
 
 	} else if v, ok := value.(device.TamperSensorValues); ok {
@@ -197,21 +200,23 @@ func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value 
 
 	} else if v, ok := value.(device.BatteryLevelSensorValue); ok {
 		fmt.Printf("Battery Value %f\n", v.BatteryLevel)
-		if v.BatteryLevel < config.General().BatteryThreshold {
-			w.noteMgr.NotifyLowBattery(w.specForDeviceId(id), w.zoneForDeviceId(id), v.BatteryLevel)
-		}
+		//if v.BatteryLevel/100 < config.General().BatteryThreshold {
+		w.noteMgr.NotifyBatteryLevel(w.specForDeviceId(id), w.zoneForDeviceId(id), v.BatteryLevel)
+		//}
 
 	} else if v, ok := value.(device.LinkQualitySensorValue); ok {
 		fmt.Printf("Link Quality Value %f\n", v.LinkQuality)
-		if v.LinkQuality < config.General().LinkQualityThreshold {
-			w.noteMgr.NotifyLowLinkQuality(w.specForDeviceId(id), w.zoneForDeviceId(id), v.LinkQuality)
-		}
+		//if v.LinkQuality/255 < config.General().LinkQualityThreshold {
+		w.noteMgr.NotifyLinkQuality(w.specForDeviceId(id), w.zoneForDeviceId(id), v.LinkQuality)
+		//}
 
 	} else if v, ok := value.(device.HumiditySensorValue); ok {
 		fmt.Printf("Humidity Value %f\n", v.Humidity)
+		w.noteMgr.NotifyHumidityValue(w.specForDeviceId(id), w.zoneForDeviceId(id), v.Humidity)
 
 	} else if v, ok := value.(device.TemperatureSensorValue); ok {
 		fmt.Printf("Temperature Value %f\n", v.Temperature)
+		w.noteMgr.NotifyTemperatureValue(w.specForDeviceId(id), w.zoneForDeviceId(id), v.Temperature)
 
 	} else if v, ok := value.(device.ArmingSensorValue); ok {
 		if v.ArmMode == arm.Disarmed {
@@ -413,18 +418,23 @@ func (w *Waechter) DeviceUnavailable(id device.Id) {
 	d, ok := w.devices[id]
 	if ok {
 		d.Active = false
+		w.noteMgr.NotifyDeviceUnAvailable(w.specForDeviceId(id), w.zoneForDeviceId(id))
 	}
 
 	z := w.zoneForDeviceId(id)
 	if z.Armed {
 		w.alarm(id, alarm.Tamper, false)
 	}
+
+	// remove this device when it is deactivated and not available, by Jack Chen
+	delete(w.devices, id)
 }
 
 func (w *Waechter) DeviceAvailable(id device.Id) {
 	d, ok := w.devices[id]
 	if ok {
 		d.Active = true
+		w.noteMgr.NotifyDeviceAvailable(w.specForDeviceId(id), w.zoneForDeviceId(id))
 		w.updateActor(id, device.StateActor, w.state.stateActorPayload())
 		w.updateActor(id, device.AlarmActor, w.state.alarmActorPayload())
 	}

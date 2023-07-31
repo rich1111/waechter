@@ -123,7 +123,7 @@ func (c *Connector) ActivateDevice(id device.Id) error {
 
 func (c *Connector) DeactivateDevice(id device.Id) error {
 	_, found := c.activeDevices.Load(id)
-	if found {
+	if !found {
 		return errors.New("device not found")
 	}
 
@@ -221,11 +221,11 @@ func (c *Connector) deviceMessageHandler(id device.Id) MessageHandler {
 				}
 			case device.BatteryLevelSensor:
 				if v := extract[float64](data, "battery"); v != nil {
-					c.ctrl.DeliverSensorValue(id, s, device.BatteryLevelSensorValue{BatteryLevel: float32(*v) / float32(100)})
+					c.ctrl.DeliverSensorValue(id, s, device.BatteryLevelSensorValue{BatteryLevel: float32(*v)})
 				}
 			case device.LinkQualitySensor:
 				if v := extract[float64](data, "linkquality"); v != nil {
-					c.ctrl.DeliverSensorValue(id, s, device.LinkQualitySensorValue{LinkQuality: float32(*v) / float32(255)})
+					c.ctrl.DeliverSensorValue(id, s, device.LinkQualitySensorValue{LinkQuality: float32(*v)})
 				}
 			case device.ArmingSensor, device.DisarmingSensor, device.PanicSensor:
 				if msg.Retained() {

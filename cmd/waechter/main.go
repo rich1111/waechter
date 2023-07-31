@@ -7,6 +7,7 @@ import (
 	"github.com/mtrossbach/waechter/internal/config"
 	"github.com/mtrossbach/waechter/internal/i18n"
 	"github.com/mtrossbach/waechter/internal/log"
+	sparkplugb_client "github.com/mtrossbach/waechter/notification/sparkplugb-client"
 	"github.com/mtrossbach/waechter/notification/whatsapp"
 	"github.com/mtrossbach/waechter/system"
 	"os"
@@ -47,6 +48,8 @@ func main() {
 			if config := config.WhatsApp(); config != nil {
 				waechter.AddNotificationAdapter(whatsapp.NewWhatsApp(*config))
 			}
+		case "sparkplug":
+			waechter.AddNotificationAdapter(sparkplugb_client.NewSparkplug())
 		}
 	}
 
