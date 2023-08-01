@@ -100,7 +100,7 @@ func (w *Waechter) AddNotificationAdapter(adapter NotificationAdapter) {
 }
 
 func (w *Waechter) loadState() {
-	s := loadState()
+	s := LoadState()
 	w.setAlarm(s.Alarm)
 	w.setArmMode(s.ArmMode)
 	w.state.ArmModeUpdated = s.ArmModeUpdated
@@ -474,7 +474,7 @@ func (w *Waechter) setArmMode(mode arm.Mode) {
 				}
 			}()
 		}
-		persistState(w.state)
+		PersistState(w.state)
 	}
 }
 
@@ -490,7 +490,7 @@ func (w *Waechter) setAlarm(a alarm.Type) {
 			l = l.Int("entryDelay", config.General().EntryDelay)
 		}
 		l.Msg("➔ Alarm changed")
-		persistState(w.state)
+		PersistState(w.state)
 	}
 }
 

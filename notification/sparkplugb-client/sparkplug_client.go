@@ -14,11 +14,15 @@ Copyright (c) 2023 Winsonic Electronics, Taiwan
 package sparkplugb_client
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"github.com/mtrossbach/waechter/internal/config"
+	"github.com/mtrossbach/waechter/system"
 	"github.com/mtrossbach/waechter/system/alarm"
 	"github.com/mtrossbach/waechter/system/device"
 	"github.com/mtrossbach/waechter/system/zone"
+	"net"
 	"strings"
 	"time"
 
@@ -96,16 +100,24 @@ func (s *Sparkplug) NotifyAutoDisarm(person config.Person, systemName string) bo
 	return true
 }
 
+//ServerIP: 192.168.11.61
+//Username: 5d9a6bce-14b5-11ee-ab7c-0242ac120006
+//Password: 861peUJXKI49xlb0FqECws7Q3a52RGgo
+//GroupID: 5d9a6bce-14b5-11ee-ab7c-0242ac120006
+//NodeID: 70:4a:0e:d4:5f:da
+
 func NewSparkplug() *Sparkplug {
+	addrMac, _, err := getNetInterfaceMacIPAddr("wlan0")
+
 	sp := Sparkplug{
 		node: sparkplug.ClientNode{
 			Config: sparkplug.Config{
 				ServerUrl: "192.168.11.61",
-				Username:  "f2179884-ff7b-11ed-ac90-0242ac150002",
-				Password:  "Xm36xFJ4WCTid98op5jZ27hI10SvlVuy",
-				GroupID:   "f2179884-ff7b-11ed-ac90-0242ac150002",
-				NodeID:    "ac:de:48:00:11:22",
-				ClientID:  "ac:de:48:00:11:22", // Device MAC
+				Username:  "5d9a6bce-14b5-11ee-ab7c-0242ac120006",
+				Password:  "861peUJXKI49xlb0FqECws7Q3a52RGgo",
+				GroupID:   "5d9a6bce-14b5-11ee-ab7c-0242ac120006",
+				NodeID:    addrMac,
+				ClientID:  addrMac, // Gateway MAC
 			},
 			MessagePubHandler:   &messagePubHandler,
 			ConnectHandler:      &connectHandler,
@@ -114,7 +126,7 @@ func NewSparkplug() *Sparkplug {
 		},
 	}
 
-	err := sp.node.Connect(0)
+	err = sp.node.Connect(getBDSeq())
 	if err != nil {
 		fmt.Println(err)
 		sp.connected = false
@@ -130,6 +142,18 @@ func NewSparkplug() *Sparkplug {
 	}
 
 	return &sp
+}
+
+func getBDSeq() int {
+	s := system.LoadState() // load state from file
+	bdSeq := s.BdSeq
+	if bdSeq == 255 {
+		s.BdSeq = 0 // recursive to 0
+	} else {
+		s.BdSeq = bdSeq + 1 // increase 1
+	}
+	system.PersistState(s) // write state to file
+	return bdSeq
 }
 
 // ******************************************************************************
@@ -190,7 +214,7 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 var reconnectingHandler mqtt.ReconnectHandler = func(client mqtt.Client, options *mqtt.ClientOptions) {
 	fmt.Printf("Reconnect handler lost")
 	// Note: Need to increment the bdSeq here for reconnecting
-	wp, err := sparkplug.GetWillPayload(1)
+	wp, err := sparkplug.GetWillPayload(getBDSeq())
 	if err != nil {
 		fmt.Println("Error encoding will payload: ", err)
 	}
@@ -298,12 +322,12 @@ func getNodeBirthMetrics() []sparkplug.Metric {
 	m3 := sparkplug.Metric{
 		Name:     "Model Name",
 		DataType: sparkplug.TypeString,
-		Value:    "ZB-001",
+		Value:    "ZIGBEE2MQTT",
 	}
 	m4 := sparkplug.Metric{
 		Name:     "Firmware Version",
 		DataType: sparkplug.TypeString,
-		Value:    "1.0.1",
+		Value:    "1.0.0",
 	}
 	ms := []sparkplug.Metric{}
 	ms = append(ms, m1)
@@ -384,4 +408,51 @@ func getDeviceDataMetrics_2() []sparkplug.Metric {
 	ms = append(ms, m6)
 
 	return ms
+}
+
+// getNetInterfaceMacIPAddr gets network interface MAC hardware
+// address, IP address of the host machine
+func getNetInterfaceMacIPAddr(interfaceName string) (addrMAC string, addrIP string, err error) {
+	var (
+		interfaces []net.Interface
+		addrs      []net.Addr
+		ipv4Addr   net.IP
+		macAddr    net.HardwareAddr
+	)
+
+	interfaces, err = net.Interfaces()
+	if err == nil {
+		for _, i := range interfaces {
+			if i.Name == interfaceName {
+				if i.Flags&net.FlagUp != 0 && bytes.Compare(i.HardwareAddr, nil) != 0 {
+					// Don't use random as we have a real address
+					macAddr = i.HardwareAddr
+					addrMAC = macAddr.String()
+					if addrs, err = i.Addrs(); err != nil { // get addresses
+						return addrMAC, "0.0.0.0", err
+					}
+					for _, addr := range addrs { // get ipv4 address
+						if ipv4Addr = addr.(*net.IPNet).IP.To4(); ipv4Addr != nil {
+							break
+						}
+					}
+					if ipv4Addr == nil {
+						err = errors.New(fmt.Sprintf("interface %s don't have an ipv4 address\n", interfaceName))
+						return addrMAC, "0.0.0.0", err
+					}
+					addrIP = ipv4Addr.String()
+					//fmt.Println("Resolved Host MAC: " + addrMAC + " ,IP address " + addrIP)
+					break
+				} else {
+					err = errors.New(fmt.Sprintf("interface %s not used\n", interfaceName))
+					return "0:0:0:0:0:0", "0.0.0.0", err
+				}
+			}
+		}
+		if ipv4Addr == nil || macAddr == nil {
+			err = errors.New(fmt.Sprintf("interface %s not found\n", interfaceName))
+			return "0:0:0:0:0:0", "0.0.0.0", err
+		}
+	}
+	return
 }

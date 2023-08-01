@@ -53,13 +53,13 @@ func (n *notificationManager) NotifyRecovery(device device.Spec, zone zone.Zone)
 
 func (n *notificationManager) NotifyDeviceAvailable(device device.Spec, zone zone.Zone) {
 	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
-		return adapter.NotifyRecovery(person, config.General().Name, device, zone)
+		return adapter.NotifyDeviceAvailable(person, config.General().Name, device, zone)
 	})
 }
 
 func (n *notificationManager) NotifyDeviceUnAvailable(device device.Spec, zone zone.Zone) {
 	n.notify(n.allPersons(), func(person config.Person, adapter NotificationAdapter) bool {
-		return adapter.NotifyRecovery(person, config.General().Name, device, zone)
+		return adapter.NotifyDeviceUnAvailable(person, config.General().Name, device, zone)
 	})
 }
 

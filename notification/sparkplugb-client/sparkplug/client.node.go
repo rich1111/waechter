@@ -14,7 +14,6 @@ Copyright (c) 2023 Winsonic Electronics, Taiwan
 package sparkplug
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -145,10 +144,6 @@ func (c *ClientNode) PublishDeviceDeath(deviceID string) error {
 // MessageType is either MESSAGETYPE_NBIRTH or MESSAGETYPE_NDATA
 // Note: Do not use other message types other than the above 2 types
 func (c *ClientNode) sendNodePayload(messageType string, metrics []Metric) error {
-	if c.client == nil {
-		return errors.New("sendNodePayload - no MQTT client exist")
-	}
-
 	p := Payload{
 		Metrics: metrics,
 	}
@@ -185,7 +180,6 @@ func (c *ClientNode) sendNodePayload(messageType string, metrics []Metric) error
 	//fmt.Println("publish:", client, topic, b)
 	token := c.client.Publish(topic, 0, false, b)
 	token.Wait()
-	fmt.Println("sendNodePayload - published")
 	return nil
 }
 
@@ -193,10 +187,6 @@ func (c *ClientNode) sendNodePayload(messageType string, metrics []Metric) error
 // MessageType is either MESSAGETYPE_DBIRTH or MESSAGETYPE_DDATA or MESSAGETYPE_DDEATH
 // Note: Do not use other message types other than the above 3 types
 func (c *ClientNode) sendDevicePayload(deviceID string, messageType string, metrics []Metric) error {
-	if c.client == nil {
-		return errors.New("sendDevicePayload - no MQTT client exist")
-	}
-
 	p := Payload{}
 
 	// Set Metrics if not nil
@@ -221,7 +211,6 @@ func (c *ClientNode) sendDevicePayload(deviceID string, messageType string, metr
 	//fmt.Println("publish:", client, topic, b)
 	token := c.client.Publish(topic, 0, false, b)
 	token.Wait()
-	fmt.Println("sendDevicePayload - published")
 	return nil
 }
 

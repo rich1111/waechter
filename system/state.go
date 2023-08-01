@@ -16,12 +16,16 @@ type State struct {
 	ArmMode        arm.Mode   `json:"armMode"`
 	Alarm          alarm.Type `json:"alarm"`
 	ArmModeUpdated time.Time  `json:"ArmModeUpdated"`
+	BdSeq          int        `json:"bdSeq"`
 }
 
-func loadState() State {
+func LoadState() State {
 	var state State
+
+	// initial value if state file not exist
 	state.ArmMode = arm.Perimeter
 	state.Alarm = alarm.Burglar
+	state.BdSeq = 0
 
 	filename := path.Join(config.Dir(), "state")
 	data, err := os.ReadFile(filename)
@@ -40,7 +44,7 @@ func loadState() State {
 	return state
 }
 
-func persistState(state State) {
+func PersistState(state State) {
 	data, err := json.Marshal(state)
 	if err != nil {
 		log.Error().Err(err).Msg("Could not marshal state")
