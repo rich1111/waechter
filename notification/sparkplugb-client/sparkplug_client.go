@@ -17,17 +17,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/mtrossbach/waechter/internal/config"
+	"github.com/mtrossbach/waechter/notification/sparkplugb-client/sparkplug"
 	"github.com/mtrossbach/waechter/system"
 	"github.com/mtrossbach/waechter/system/alarm"
 	"github.com/mtrossbach/waechter/system/device"
 	"github.com/mtrossbach/waechter/system/zone"
 	"net"
-	"strings"
-	"time"
-
-	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/mtrossbach/waechter/notification/sparkplugb-client/sparkplug"
+	"strconv"
 )
 
 type Sparkplug struct {
@@ -48,47 +46,109 @@ func (s *Sparkplug) NotifyRecovery(person config.Person, systemName string, devi
 }
 
 func (s *Sparkplug) NotifyDeviceAvailable(person config.Person, systemName string, device device.Spec, zone zone.Zone) bool {
+	// Publish Device Birth
+	// Note: First Node Birth must be published
+	ms := getDeviceBirthMetrics(device)
+	deviceID := device.Id.Entity() // Get this ID from Zigbee device
+	err := s.node.PublishDeviceBirth(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
 func (s *Sparkplug) NotifyDeviceUnAvailable(person config.Person, systemName string, device device.Spec, zone zone.Zone) bool {
+	// Publish Device Death
+	// If Device cannot be contacted
+	deviceID := device.Id.Entity() // Get this ID from Zigbee device
+	err := s.node.PublishDeviceDeath(deviceID)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
-func (s *Sparkplug) NotifyBatteryLevel(person config.Person, systemName string, device device.Spec, zone zone.Zone, batteryLevel float32) bool {
-	//TODO implement me
-	fmt.Println("not implemented")
+func (s *Sparkplug) NotifyBatteryLevel(person config.Person, systemName string, dev device.Spec, zone zone.Zone, batteryLevel float32) bool {
+	// Publish Device Data
+	// When there is change in dev metrics
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	ms := getDeviceDataMetrics_2(device.BatteryLevelSensor, device.BatteryLevelSensorValue{BatteryLevel: batteryLevel})
+	err := s.node.PublishDeviceData(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
-func (s *Sparkplug) NotifyLinkQuality(person config.Person, systemName string, device device.Spec, zone zone.Zone, quality float32) bool {
-	//TODO implement me
-	fmt.Println("not implemented")
+func (s *Sparkplug) NotifyLinkQuality(person config.Person, systemName string, dev device.Spec, zone zone.Zone, quality float32) bool {
+	// Publish Device Data
+	// When there is change in dev metrics
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	ms := getDeviceDataMetrics_2(device.LinkQualitySensor, device.LinkQualitySensorValue{LinkQuality: quality})
+	err := s.node.PublishDeviceData(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
-func (w *Sparkplug) NotifyHumidityValue(person config.Person, systemName string, device device.Spec, zone zone.Zone, humidity float32) bool {
-
+func (s *Sparkplug) NotifyHumidityValue(person config.Person, systemName string, dev device.Spec, zone zone.Zone, humidity float32) bool {
+	// Publish Device Data
+	// When there is change in dev metrics
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	ms := getDeviceDataMetrics_2(device.Humidity, device.HumiditySensorValue{Humidity: humidity})
+	err := s.node.PublishDeviceData(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
-func (w *Sparkplug) NotifyTemperatureValue(person config.Person, systemName string, device device.Spec, zone zone.Zone, temperature float32) bool {
-
+func (s *Sparkplug) NotifyTemperatureValue(person config.Person, systemName string, dev device.Spec, zone zone.Zone, temperature float32) bool {
+	// Publish Device Data
+	// When there is change in dev metrics
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	ms := getDeviceDataMetrics_2(device.Temperature, device.TemperatureSensorValue{Temperature: temperature})
+	err := s.node.PublishDeviceData(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
-func (w *Sparkplug) NotifyMotionSensor(person config.Person, systemName string, device device.Spec, zone zone.Zone, motion bool) bool {
-
+func (s *Sparkplug) NotifyMotionSensor(person config.Person, systemName string, dev device.Spec, zone zone.Zone, motion bool) bool {
+	// Publish Device Data
+	// When there is change in dev metrics
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	ms := getDeviceDataMetrics_2(device.MotionSensor, device.MotionSensorValue{Motion: motion})
+	err := s.node.PublishDeviceData(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
-func (w *Sparkplug) NotifyContactSensor(person config.Person, systemName string, device device.Spec, zone zone.Zone, contact bool) bool {
-
+func (s *Sparkplug) NotifyContactSensor(person config.Person, systemName string, dev device.Spec, zone zone.Zone, contact bool) bool {
+	// Publish Device Data
+	// When there is change in dev metrics
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	ms := getDeviceDataMetrics_2(device.ContactSensor, device.ContactSensorValue{Contact: contact})
+	err := s.node.PublishDeviceData(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
-func (w *Sparkplug) NotifySmokeSensor(person config.Person, systemName string, device device.Spec, zone zone.Zone, smoke bool) bool {
-
+func (s *Sparkplug) NotifySmokeSensor(person config.Person, systemName string, dev device.Spec, zone zone.Zone, smoke bool) bool {
+	// Publish Device Data
+	// When there is change in dev metrics
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	ms := getDeviceDataMetrics_2(device.SmokeSensor, device.SmokeSensorValue{Smoke: smoke})
+	err := s.node.PublishDeviceData(deviceID, ms)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return true
 }
 
@@ -101,9 +161,9 @@ func (s *Sparkplug) NotifyAutoDisarm(person config.Person, systemName string) bo
 }
 
 //ServerIP: 192.168.11.61
-//Username: 5d9a6bce-14b5-11ee-ab7c-0242ac120006
-//Password: 861peUJXKI49xlb0FqECws7Q3a52RGgo
-//GroupID: 5d9a6bce-14b5-11ee-ab7c-0242ac120006
+//Username: 3a061058-30f5-11ee-94c7-0242ac120006
+//Password: J21Pg3w7R4nAdCKELHs8VMFjvS5DY069
+//GroupID: 3a061058-30f5-11ee-94c7-0242ac120006
 //NodeID: 70:4a:0e:d4:5f:da
 
 func NewSparkplug() *Sparkplug {
@@ -113,9 +173,9 @@ func NewSparkplug() *Sparkplug {
 		node: sparkplug.ClientNode{
 			Config: sparkplug.Config{
 				ServerUrl: "192.168.11.61",
-				Username:  "5d9a6bce-14b5-11ee-ab7c-0242ac120006",
-				Password:  "861peUJXKI49xlb0FqECws7Q3a52RGgo",
-				GroupID:   "5d9a6bce-14b5-11ee-ab7c-0242ac120006",
+				Username:  "3a061058-30f5-11ee-94c7-0242ac120006",
+				Password:  "J21Pg3w7R4nAdCKELHs8VMFjvS5DY069",
+				GroupID:   "3a061058-30f5-11ee-94c7-0242ac120006",
 				NodeID:    addrMac,
 				ClientID:  addrMac, // Gateway MAC
 			},
@@ -157,37 +217,6 @@ func getBDSeq() int {
 }
 
 // ******************************************************************************
-// *************************** Application Handlers *****************************
-// ******************************************************************************
-var messagePubHandlerA mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Println("Application: Received message by, topic=", msg.Topic())
-	topic := strings.Split(msg.Topic(), "/")
-	if len(topic) >= 2 && topic[0] == "spBv1.0" {
-		if topic[1] == "STATE" {
-			fmt.Println("Application: Payload=", string(msg.Payload()))
-		} else {
-			p := sparkplug.Payload{}
-			err := p.DecodePayload(msg.Payload())
-			if err != nil {
-				fmt.Println(err)
-			}
-			ms := p.Metrics
-			for i := range ms {
-				fmt.Println("Application: Metric: Name=", ms[i].Name, ", DataType=", ms[i].DataType.String(), ", Value=", ms[i].Value)
-			}
-		}
-	}
-}
-
-var connectHandlerA mqtt.OnConnectHandler = func(client mqtt.Client) {
-	fmt.Println("Application: Connected")
-}
-
-var connectLostHandlerA mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	fmt.Printf("Application: Connect lost: %v", err)
-}
-
-// ******************************************************************************
 // ******************************* Node Handlers ********************************
 // ******************************************************************************
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -212,7 +241,7 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 }
 
 var reconnectingHandler mqtt.ReconnectHandler = func(client mqtt.Client, options *mqtt.ClientOptions) {
-	fmt.Printf("Reconnect handler lost")
+	fmt.Printf("Reconnect handler")
 	// Note: Need to increment the bdSeq here for reconnecting
 	wp, err := sparkplug.GetWillPayload(getBDSeq())
 	if err != nil {
@@ -223,90 +252,6 @@ var reconnectingHandler mqtt.ReconnectHandler = func(client mqtt.Client, options
 
 // ******************************************************************************
 // ******************************************************************************
-
-func main_test() {
-	// App Node
-	// app := sparkplug.ClientApp{
-	// 	Auth: sparkplug.Auth{
-	// 		ServerUrl: "192.168.11.61",
-	// 		Username:  "DMS",
-	// 		Password:  "12345678901234567890123456789012",
-	// 		GroupID:   "DMS",
-	// 	},
-	// 	MessagePubHandler:  &messagePubHandlerA,
-	// 	ConnectHandler:     &connectHandlerA,
-	// 	ConnectLostHandler: &connectLostHandlerA,
-	// 	// ReconnectingHandler: &reconnectingHandlerA,
-	// }
-	// app.Connect()
-	// app.SetOnline()
-
-	// Client Node
-	node := sparkplug.ClientNode{
-		Config: sparkplug.Config{
-			ServerUrl: "192.168.11.61",
-			Username:  "f2179884-ff7b-11ed-ac90-0242ac150002",
-			Password:  "Xm36xFJ4WCTid98op5jZ27hI10SvlVuy",
-			GroupID:   "f2179884-ff7b-11ed-ac90-0242ac150002",
-			NodeID:    "ac:de:48:00:11:22",
-			ClientID:  "ac:de:48:00:11:22", // Device MAC
-		},
-		MessagePubHandler:   &messagePubHandler,
-		ConnectHandler:      &connectHandler,
-		ConnectLostHandler:  &connectLostHandler,
-		ReconnectingHandler: &reconnectingHandler,
-	}
-
-	err := node.Connect(0)
-	if err != nil {
-		fmt.Println(err)
-	}
-	// Publish Node Birth
-	ms := getNodeBirthMetrics()
-	err = node.PublishNodeBirth(ms)
-	if err != nil {
-		fmt.Println(err)
-	}
-	// Publish Device Birth
-	// Note: First Node Birth must be published
-	ms1 := getDeviceBirthMetrics()
-	deviceID := "ZB-4995887" // Get this ID from Zigbee device
-	err = node.PublishDeviceBirth(deviceID, ms1)
-	if err != nil {
-		fmt.Println(err)
-	}
-	time.Sleep(time.Second * 60)
-
-	// Publish Device Data
-	// When there is change in device metrics
-	ms2 := getDeviceDataMetrics_1()
-	err = node.PublishDeviceData(deviceID, ms2)
-	if err != nil {
-		fmt.Println(err)
-	}
-	time.Sleep(time.Second * 60)
-
-	// Publish Device Data
-	// When there is change in device metrics
-	ms3 := getDeviceDataMetrics_2()
-	err = node.PublishDeviceData(deviceID, ms3)
-	if err != nil {
-		fmt.Println(err)
-	}
-	time.Sleep(time.Second * 60)
-
-	// Publish Device Death
-	// If Device cannot be contacted
-	err = node.PublishDeviceDeath(deviceID)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// Sleep for 3 minutes then simulate a Node "death"
-	// by letting the code run its course
-	time.Sleep(time.Second * 60 * 3)
-
-}
 
 func getNodeBirthMetrics() []sparkplug.Metric {
 	m1 := sparkplug.Metric{
@@ -338,74 +283,164 @@ func getNodeBirthMetrics() []sparkplug.Metric {
 	return ms
 }
 
-func getDeviceBirthMetrics() []sparkplug.Metric {
+func getDeviceBirthMetrics(dev_spec device.Spec) []sparkplug.Metric {
 	m1 := sparkplug.Metric{
 		Name:     "Device Name",
 		DataType: sparkplug.TypeString,
-		Value:    "大廳鐵捲門",
+		Value:    dev_spec.DisplayName,
 	}
 	m2 := sparkplug.Metric{
 		Name:     "Model Type",
 		DataType: sparkplug.TypeString,
-		Value:    "DoorSensor",
+		Value:    dev_spec.Description,
 	}
 	m3 := sparkplug.Metric{
 		Name:     "Model Name",
 		DataType: sparkplug.TypeString,
-		Value:    "ZB-001",
+		Value:    dev_spec.Model,
 	}
 	m4 := sparkplug.Metric{
-		Name:     "Firmware Version",
+		Name:     "Vendor",
 		DataType: sparkplug.TypeString,
-		Value:    "1.0.1",
+		Value:    dev_spec.Vendor,
 	}
 	m5 := sparkplug.Metric{
-		Name:     "Battery Level",
-		DataType: sparkplug.TypeInt,
-		Value:    "100",
+		Name:     "Firmware Version",
+		DataType: sparkplug.TypeString,
+		Value:    "1.0.0",
 	}
-	m6 := sparkplug.Metric{
-		Name:     "zb/onoff",
-		DataType: sparkplug.TypeInt,
-		Value:    "0",
-	}
+
 	ms := []sparkplug.Metric{}
 	ms = append(ms, m1)
 	ms = append(ms, m2)
 	ms = append(ms, m3)
 	ms = append(ms, m4)
 	ms = append(ms, m5)
-	ms = append(ms, m6)
+
+	for _, s := range dev_spec.Sensors {
+		switch s {
+		case device.Humidity:
+			m := sparkplug.Metric{
+				Name:     "Humidity",
+				DataType: sparkplug.TypeFloat,
+				Value:    "0",
+			}
+			ms = append(ms, m)
+		case device.Temperature:
+			m := sparkplug.Metric{
+				Name:     "Temperature",
+				DataType: sparkplug.TypeFloat,
+				Value:    "0",
+			}
+			ms = append(ms, m)
+		case device.MotionSensor:
+			m := sparkplug.Metric{
+				Name:     "motion/onoff",
+				DataType: sparkplug.TypeBool,
+				Value:    "false",
+			}
+			ms = append(ms, m)
+		case device.ContactSensor:
+			m := sparkplug.Metric{
+				Name:     "contact/onoff",
+				DataType: sparkplug.TypeBool,
+				Value:    "false",
+			}
+			ms = append(ms, m)
+		case device.SmokeSensor:
+			m := sparkplug.Metric{
+				Name:     "smoke/onoff",
+				DataType: sparkplug.TypeBool,
+				Value:    "false",
+			}
+			ms = append(ms, m)
+		case device.BatteryLevelSensor:
+			m := sparkplug.Metric{
+				Name:     "Battery Level",
+				DataType: sparkplug.TypeFloat,
+				Value:    "100",
+			}
+			ms = append(ms, m)
+		case device.LinkQualitySensor:
+			m := sparkplug.Metric{
+				Name:     "Link Quality",
+				DataType: sparkplug.TypeFloat,
+				Value:    "255",
+			}
+			ms = append(ms, m)
+		}
+	}
 
 	return ms
 }
 
-func getDeviceDataMetrics_1() []sparkplug.Metric {
-	m5 := sparkplug.Metric{
-		Name:     "Battery Level",
-		DataType: sparkplug.TypeInt,
-		Value:    "90",
-	}
-	m6 := sparkplug.Metric{
-		Name:     "zb/onoff",
-		DataType: sparkplug.TypeInt,
-		Value:    "1",
-	}
+func getDeviceDataMetrics_2(sensor device.Sensor, value any) []sparkplug.Metric {
 	ms := []sparkplug.Metric{}
-	ms = append(ms, m5)
-	ms = append(ms, m6)
-
-	return ms
-}
-
-func getDeviceDataMetrics_2() []sparkplug.Metric {
-	m6 := sparkplug.Metric{
-		Name:     "zb/onoff",
-		DataType: sparkplug.TypeInt,
-		Value:    "0",
+	switch sensor {
+	case device.Humidity:
+		if v, ok := value.(device.HumiditySensorValue); ok {
+			m := sparkplug.Metric{
+				Name:     "Humidity",
+				DataType: sparkplug.TypeFloat,
+				Value:    fmt.Sprintf("%f", v.Humidity),
+			}
+			ms = append(ms, m)
+		}
+	case device.Temperature:
+		if v, ok := value.(device.TemperatureSensorValue); ok {
+			m := sparkplug.Metric{
+				Name:     "Temperature",
+				DataType: sparkplug.TypeFloat,
+				Value:    fmt.Sprintf("%f", v.Temperature),
+			}
+			ms = append(ms, m)
+		}
+	case device.MotionSensor:
+		if v, ok := value.(device.MotionSensorValue); ok {
+			m := sparkplug.Metric{
+				Name:     "motion/onoff",
+				DataType: sparkplug.TypeBool,
+				Value:    strconv.FormatBool(v.Motion),
+			}
+			ms = append(ms, m)
+		}
+	case device.ContactSensor:
+		if v, ok := value.(device.ContactSensorValue); ok {
+			m := sparkplug.Metric{
+				Name:     "contact/onoff",
+				DataType: sparkplug.TypeBool,
+				Value:    strconv.FormatBool(v.Contact),
+			}
+			ms = append(ms, m)
+		}
+	case device.SmokeSensor:
+		if v, ok := value.(device.SmokeSensorValue); ok {
+			m := sparkplug.Metric{
+				Name:     "smoke/onoff",
+				DataType: sparkplug.TypeBool,
+				Value:    strconv.FormatBool(v.Smoke),
+			}
+			ms = append(ms, m)
+		}
+	case device.BatteryLevelSensor:
+		if v, ok := value.(device.BatteryLevelSensorValue); ok {
+			m := sparkplug.Metric{
+				Name:     "Battery Level",
+				DataType: sparkplug.TypeFloat,
+				Value:    fmt.Sprintf("%f", v.BatteryLevel),
+			}
+			ms = append(ms, m)
+		}
+	case device.LinkQualitySensor:
+		if v, ok := value.(device.LinkQualitySensorValue); ok {
+			m := sparkplug.Metric{
+				Name:     "Link Quality",
+				DataType: sparkplug.TypeFloat,
+				Value:    fmt.Sprintf("%f", v.LinkQuality),
+			}
+			ms = append(ms, m)
+		}
 	}
-	ms := []sparkplug.Metric{}
-	ms = append(ms, m6)
 
 	return ms
 }
