@@ -104,6 +104,7 @@ func (w *Waechter) loadState() {
 	w.setAlarm(s.Alarm)
 	w.setArmMode(s.ArmMode)
 	w.state.ArmModeUpdated = s.ArmModeUpdated
+	w.state.BdSeq = s.BdSeq
 }
 
 func (w *Waechter) loadZones() {

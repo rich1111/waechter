@@ -114,6 +114,7 @@ func (c *ClientNode) subscribeNCMD() {
 }
 
 func (c *ClientNode) PublishNodeBirth(metrics []Metric) error {
+	fmt.Printf("PublishNodeBirth ...\n")
 	return c.sendNodePayload(MESSAGETYPE_NBIRTH, metrics)
 }
 
@@ -129,14 +130,17 @@ func (c *ClientNode) SubscribeDeviceCMD(deviceID string) {
 }
 
 func (c *ClientNode) PublishDeviceBirth(deviceID string, metrics []Metric) error {
+	fmt.Printf("PublishDeviceBirth ...%s\n", deviceID)
 	return c.sendDevicePayload(deviceID, MESSAGETYPE_DBIRTH, metrics)
 }
 
 func (c *ClientNode) PublishDeviceData(deviceID string, metrics []Metric) error {
+	fmt.Printf("PublishDeviceData ...%s\n", deviceID)
 	return c.sendDevicePayload(deviceID, MESSAGETYPE_DDATA, metrics)
 }
 
 func (c *ClientNode) PublishDeviceDeath(deviceID string) error {
+	fmt.Printf("PublishDeviceDeath ...%s\n", deviceID)
 	return c.sendDevicePayload(deviceID, MESSAGETYPE_DDEATH, nil)
 }
 

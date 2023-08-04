@@ -45,11 +45,11 @@ func (s *Sparkplug) NotifyRecovery(person config.Person, systemName string, devi
 	return true
 }
 
-func (s *Sparkplug) NotifyDeviceAvailable(person config.Person, systemName string, device device.Spec, zone zone.Zone) bool {
+func (s *Sparkplug) NotifyDeviceAvailable(person config.Person, systemName string, dev device.Spec, zone zone.Zone) bool {
 	// Publish Device Birth
 	// Note: First Node Birth must be published
-	ms := getDeviceBirthMetrics(device)
-	deviceID := device.Id.Entity() // Get this ID from Zigbee device
+	ms := getDeviceBirthMetrics(dev)
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee device
 	err := s.node.PublishDeviceBirth(deviceID, ms)
 	if err != nil {
 		fmt.Println(err)
@@ -57,10 +57,10 @@ func (s *Sparkplug) NotifyDeviceAvailable(person config.Person, systemName strin
 	return true
 }
 
-func (s *Sparkplug) NotifyDeviceUnAvailable(person config.Person, systemName string, device device.Spec, zone zone.Zone) bool {
+func (s *Sparkplug) NotifyDeviceUnAvailable(person config.Person, systemName string, dev device.Spec, zone zone.Zone) bool {
 	// Publish Device Death
 	// If Device cannot be contacted
-	deviceID := device.Id.Entity() // Get this ID from Zigbee device
+	deviceID := dev.Id.Entity() // Get this ID from Zigbee device
 	err := s.node.PublishDeviceDeath(deviceID)
 	if err != nil {
 		fmt.Println(err)
@@ -166,7 +166,11 @@ func (s *Sparkplug) NotifyAutoDisarm(person config.Person, systemName string) bo
 //GroupID: 3a061058-30f5-11ee-94c7-0242ac120006
 //NodeID: 70:4a:0e:d4:5f:da
 
-func NewSparkplug() *Sparkplug {
+var sysController system.Controller
+
+func NewSparkplug(w system.Controller) *Sparkplug {
+	sysController = w
+
 	addrMac, _, err := getNetInterfaceMacIPAddr("wlan0")
 
 	sp := Sparkplug{
@@ -205,8 +209,9 @@ func NewSparkplug() *Sparkplug {
 }
 
 func getBDSeq() int {
-	s := system.LoadState() // load state from file
+	s := sysController.SystemState()
 	bdSeq := s.BdSeq
+	//fmt.Printf("got bdSeq %d\n", bdSeq)
 	if bdSeq == 255 {
 		s.BdSeq = 0 // recursive to 0
 	} else {
@@ -321,35 +326,35 @@ func getDeviceBirthMetrics(dev_spec device.Spec) []sparkplug.Metric {
 		switch s {
 		case device.Humidity:
 			m := sparkplug.Metric{
-				Name:     "Humidity",
+				Name:     "metric/humidity",
 				DataType: sparkplug.TypeFloat,
 				Value:    "0",
 			}
 			ms = append(ms, m)
 		case device.Temperature:
 			m := sparkplug.Metric{
-				Name:     "Temperature",
+				Name:     "metric/temperature",
 				DataType: sparkplug.TypeFloat,
 				Value:    "0",
 			}
 			ms = append(ms, m)
 		case device.MotionSensor:
 			m := sparkplug.Metric{
-				Name:     "motion/onoff",
+				Name:     "metric/motion",
 				DataType: sparkplug.TypeBool,
 				Value:    "false",
 			}
 			ms = append(ms, m)
 		case device.ContactSensor:
 			m := sparkplug.Metric{
-				Name:     "contact/onoff",
+				Name:     "metric/contact",
 				DataType: sparkplug.TypeBool,
 				Value:    "false",
 			}
 			ms = append(ms, m)
 		case device.SmokeSensor:
 			m := sparkplug.Metric{
-				Name:     "smoke/onoff",
+				Name:     "metric/smoke",
 				DataType: sparkplug.TypeBool,
 				Value:    "false",
 			}
@@ -380,7 +385,7 @@ func getDeviceDataMetrics_2(sensor device.Sensor, value any) []sparkplug.Metric 
 	case device.Humidity:
 		if v, ok := value.(device.HumiditySensorValue); ok {
 			m := sparkplug.Metric{
-				Name:     "Humidity",
+				Name:     "metric/humidity",
 				DataType: sparkplug.TypeFloat,
 				Value:    fmt.Sprintf("%f", v.Humidity),
 			}
@@ -389,7 +394,7 @@ func getDeviceDataMetrics_2(sensor device.Sensor, value any) []sparkplug.Metric 
 	case device.Temperature:
 		if v, ok := value.(device.TemperatureSensorValue); ok {
 			m := sparkplug.Metric{
-				Name:     "Temperature",
+				Name:     "metric/temperature",
 				DataType: sparkplug.TypeFloat,
 				Value:    fmt.Sprintf("%f", v.Temperature),
 			}
@@ -398,7 +403,7 @@ func getDeviceDataMetrics_2(sensor device.Sensor, value any) []sparkplug.Metric 
 	case device.MotionSensor:
 		if v, ok := value.(device.MotionSensorValue); ok {
 			m := sparkplug.Metric{
-				Name:     "motion/onoff",
+				Name:     "metric/motion",
 				DataType: sparkplug.TypeBool,
 				Value:    strconv.FormatBool(v.Motion),
 			}
@@ -407,7 +412,7 @@ func getDeviceDataMetrics_2(sensor device.Sensor, value any) []sparkplug.Metric 
 	case device.ContactSensor:
 		if v, ok := value.(device.ContactSensorValue); ok {
 			m := sparkplug.Metric{
-				Name:     "contact/onoff",
+				Name:     "metric/contact",
 				DataType: sparkplug.TypeBool,
 				Value:    strconv.FormatBool(v.Contact),
 			}
@@ -416,7 +421,7 @@ func getDeviceDataMetrics_2(sensor device.Sensor, value any) []sparkplug.Metric 
 	case device.SmokeSensor:
 		if v, ok := value.(device.SmokeSensorValue); ok {
 			m := sparkplug.Metric{
-				Name:     "smoke/onoff",
+				Name:     "metric/smoke",
 				DataType: sparkplug.TypeBool,
 				Value:    strconv.FormatBool(v.Smoke),
 			}

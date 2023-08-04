@@ -25,6 +25,18 @@ func main() {
 	i18n.InitI18n()
 
 	waechter := system.NewWaechter()
+
+	for _, n := range config.Notification() {
+		switch n {
+		case "whatsapp":
+			if config := config.WhatsApp(); config != nil {
+				waechter.AddNotificationAdapter(whatsapp.NewWhatsApp(*config))
+			}
+		case "sparkplug":
+			waechter.AddNotificationAdapter(sparkplugb_client.NewSparkplug(waechter))
+		}
+	}
+
 	z2ms := config.Zigbee2Mqtt()
 	for _, z := range z2ms {
 		if c, err := zigbee2mqtt.NewConnector(z); err != nil {
@@ -39,17 +51,6 @@ func main() {
 			log.Error().Err(err).Str("connector", "HomeAssistant").Str("id", h.Id).Msg("Could not initialize connector.")
 		} else {
 			waechter.AddDeviceConnector(c)
-		}
-	}
-
-	for _, n := range config.Notification() {
-		switch n {
-		case "whatsapp":
-			if config := config.WhatsApp(); config != nil {
-				waechter.AddNotificationAdapter(whatsapp.NewWhatsApp(*config))
-			}
-		case "sparkplug":
-			waechter.AddNotificationAdapter(sparkplugb_client.NewSparkplug())
 		}
 	}
 
