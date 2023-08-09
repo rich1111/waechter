@@ -4,6 +4,7 @@ import "github.com/mtrossbach/waechter/internal/wslice"
 
 type Spec struct {
 	Id          Id
+	IeeeAddress string
 	DisplayName string
 	Vendor      string
 	Model       string

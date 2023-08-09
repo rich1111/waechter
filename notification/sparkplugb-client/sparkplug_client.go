@@ -49,7 +49,7 @@ func (s *Sparkplug) NotifyDeviceAvailable(person config.Person, systemName strin
 	// Publish Device Birth
 	// Note: First Node Birth must be published
 	ms := getDeviceBirthMetrics(dev)
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee device
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee device
 	err := s.node.PublishDeviceBirth(deviceID, ms)
 	if err != nil {
 		fmt.Println(err)
@@ -60,7 +60,7 @@ func (s *Sparkplug) NotifyDeviceAvailable(person config.Person, systemName strin
 func (s *Sparkplug) NotifyDeviceUnAvailable(person config.Person, systemName string, dev device.Spec, zone zone.Zone) bool {
 	// Publish Device Death
 	// If Device cannot be contacted
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee device
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee device
 	err := s.node.PublishDeviceDeath(deviceID)
 	if err != nil {
 		fmt.Println(err)
@@ -71,7 +71,7 @@ func (s *Sparkplug) NotifyDeviceUnAvailable(person config.Person, systemName str
 func (s *Sparkplug) NotifyBatteryLevel(person config.Person, systemName string, dev device.Spec, zone zone.Zone, batteryLevel float32) bool {
 	// Publish Device Data
 	// When there is change in dev metrics
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee dev
 	ms := getDeviceDataMetrics_2(device.BatteryLevelSensor, device.BatteryLevelSensorValue{BatteryLevel: batteryLevel})
 	err := s.node.PublishDeviceData(deviceID, ms)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *Sparkplug) NotifyBatteryLevel(person config.Person, systemName string, 
 func (s *Sparkplug) NotifyLinkQuality(person config.Person, systemName string, dev device.Spec, zone zone.Zone, quality float32) bool {
 	// Publish Device Data
 	// When there is change in dev metrics
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee dev
 	ms := getDeviceDataMetrics_2(device.LinkQualitySensor, device.LinkQualitySensorValue{LinkQuality: quality})
 	err := s.node.PublishDeviceData(deviceID, ms)
 	if err != nil {
@@ -95,7 +95,7 @@ func (s *Sparkplug) NotifyLinkQuality(person config.Person, systemName string, d
 func (s *Sparkplug) NotifyHumidityValue(person config.Person, systemName string, dev device.Spec, zone zone.Zone, humidity float32) bool {
 	// Publish Device Data
 	// When there is change in dev metrics
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee dev
 	ms := getDeviceDataMetrics_2(device.Humidity, device.HumiditySensorValue{Humidity: humidity})
 	err := s.node.PublishDeviceData(deviceID, ms)
 	if err != nil {
@@ -107,7 +107,7 @@ func (s *Sparkplug) NotifyHumidityValue(person config.Person, systemName string,
 func (s *Sparkplug) NotifyTemperatureValue(person config.Person, systemName string, dev device.Spec, zone zone.Zone, temperature float32) bool {
 	// Publish Device Data
 	// When there is change in dev metrics
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee dev
 	ms := getDeviceDataMetrics_2(device.Temperature, device.TemperatureSensorValue{Temperature: temperature})
 	err := s.node.PublishDeviceData(deviceID, ms)
 	if err != nil {
@@ -119,7 +119,7 @@ func (s *Sparkplug) NotifyTemperatureValue(person config.Person, systemName stri
 func (s *Sparkplug) NotifyMotionSensor(person config.Person, systemName string, dev device.Spec, zone zone.Zone, motion bool) bool {
 	// Publish Device Data
 	// When there is change in dev metrics
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee dev
 	ms := getDeviceDataMetrics_2(device.MotionSensor, device.MotionSensorValue{Motion: motion})
 	err := s.node.PublishDeviceData(deviceID, ms)
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *Sparkplug) NotifyMotionSensor(person config.Person, systemName string, 
 func (s *Sparkplug) NotifyContactSensor(person config.Person, systemName string, dev device.Spec, zone zone.Zone, contact bool) bool {
 	// Publish Device Data
 	// When there is change in dev metrics
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee dev
 	ms := getDeviceDataMetrics_2(device.ContactSensor, device.ContactSensorValue{Contact: contact})
 	err := s.node.PublishDeviceData(deviceID, ms)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *Sparkplug) NotifyContactSensor(person config.Person, systemName string,
 func (s *Sparkplug) NotifySmokeSensor(person config.Person, systemName string, dev device.Spec, zone zone.Zone, smoke bool) bool {
 	// Publish Device Data
 	// When there is change in dev metrics
-	deviceID := dev.Id.Entity() // Get this ID from Zigbee dev
+	deviceID := dev.IeeeAddress // Get this ID from Zigbee dev
 	ms := getDeviceDataMetrics_2(device.SmokeSensor, device.SmokeSensorValue{Smoke: smoke})
 	err := s.node.PublishDeviceData(deviceID, ms)
 	if err != nil {
@@ -167,13 +167,14 @@ func (s *Sparkplug) NotifyAutoDisarm(person config.Person, systemName string) bo
 //NodeID: 70:4a:0e:d4:5f:da
 
 var sysController system.Controller
+var sp Sparkplug
 
 func NewSparkplug(w system.Controller) *Sparkplug {
 	sysController = w
 
 	addrMac, _, err := getNetInterfaceMacIPAddr("wlan0")
 
-	sp := Sparkplug{
+	sp = Sparkplug{
 		node: sparkplug.ClientNode{
 			Config: sparkplug.Config{
 				ServerUrl: "192.168.11.61",
@@ -199,13 +200,22 @@ func NewSparkplug(w system.Controller) *Sparkplug {
 	}
 
 	// Publish Node Birth
+	sendingNodeBirth()
+
+	return &sp
+}
+
+func sendingNodeBirth() {
+	// Publish Node Birth
 	ms := getNodeBirthMetrics()
-	err = sp.node.PublishNodeBirth(ms)
+	err := sp.node.PublishNodeBirth(ms)
 	if err != nil {
 		fmt.Println(err)
 	}
+}
 
-	return &sp
+func reconnectZigbee2Mqtt() {
+	sysController.DeviceConnectorForId("z2m").DisconnectForReconnect()
 }
 
 func getBDSeq() int {
@@ -234,6 +244,12 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 	ms := p.Metrics
 	for i := range ms {
 		fmt.Println("Metric: Name=", ms[i].Name, ", DataType=", ms[i].DataType.String(), ", Value=", ms[i].Value)
+		if ms[i].Name == "Node Control/Rebirth" && ms[i].DataType == sparkplug.TypeBool && ms[i].Value == "true" {
+			// here want to send Node Rebirth
+			sendingNodeBirth()
+			// reconnect Zigbee2Mqtt for sending devices list again
+			reconnectZigbee2Mqtt()
+		}
 	}
 }
 
@@ -253,6 +269,9 @@ var reconnectingHandler mqtt.ReconnectHandler = func(client mqtt.Client, options
 		fmt.Println("Error encoding will payload: ", err)
 	}
 	options.WillPayload = wp
+
+	// reconnect Zigbee2Mqtt for sending devices list again
+	reconnectZigbee2Mqtt()
 }
 
 // ******************************************************************************
@@ -349,7 +368,7 @@ func getDeviceBirthMetrics(dev_spec device.Spec) []sparkplug.Metric {
 			m := sparkplug.Metric{
 				Name:     "metric/contact",
 				DataType: sparkplug.TypeBool,
-				Value:    "false",
+				Value:    "true",
 			}
 			ms = append(ms, m)
 		case device.SmokeSensor:

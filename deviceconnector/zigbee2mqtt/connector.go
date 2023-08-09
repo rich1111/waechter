@@ -78,6 +78,10 @@ func (c *Connector) Teardown() {
 	c.ctrl = nil
 }
 
+func (c *Connector) DisconnectForReconnect() {
+	c.conn.DisconnectForReconnect()
+}
+
 func (c *Connector) Id() string {
 	return c.conf.Id
 }
@@ -103,9 +107,9 @@ func (c *Connector) EnumerateDevices() []device.Spec {
 
 func (c *Connector) ActivateDevice(id device.Id) error {
 	_, found := c.activeDevices.Load(id)
-	if found {
-		return nil
-	}
+	//if found {
+	//	return nil
+	//}
 
 	_, found = c.availableDevices.Load(id)
 	if !found {
@@ -321,6 +325,7 @@ func (c *Connector) handleDeviceInfo(msg mqtt.Message) {
 func (c *Connector) specFromDeviceInfo(info Z2MDeviceInfo) device.Spec {
 	spec := device.Spec{
 		Id:          device.NewId(c.Id(), info.FriendlyName),
+		IeeeAddress: info.IeeeAddress,
 		DisplayName: info.FriendlyName,
 		Vendor:      info.Definition.Vendor,
 		Model:       info.Definition.Model,

@@ -15,7 +15,7 @@ func Init() {
 	possiblePaths := []string{
 		"./config.yaml",
 		"./config/config.yaml",
-		"/config.yaml",
+		"/root/config.yaml",
 		"~/waechter/config.yaml",
 		"~/.waechter/config.yaml",
 		"/etc/waechter/config.yaml",

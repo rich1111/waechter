@@ -200,6 +200,9 @@ func (c *Connector) DeactivateDevice(id device.Id) error {
 	return nil
 }
 
+func (c *Connector) DisconnectForReconnect() {
+}
+
 func (c *Connector) ControlActor(id device.Id, actor device.Actor, value any) bool {
 	//Not yet supported
 	return true

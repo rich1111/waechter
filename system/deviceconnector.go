@@ -19,6 +19,8 @@ type DeviceConnector interface {
 	DeactivateDevice(id device.Id) error
 
 	ControlActor(id device.Id, actor device.Actor, value any) bool
+
+	DisconnectForReconnect()
 }
 
 type Controller interface {
@@ -32,4 +34,6 @@ type Controller interface {
 	DeviceAvailable(id device.Id)
 
 	SystemState() State
+
+	DeviceConnectorForId(id string) DeviceConnector
 }

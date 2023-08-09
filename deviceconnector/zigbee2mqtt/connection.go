@@ -63,6 +63,11 @@ func (c *connection) Disconnect() {
 	c.client.Disconnect(100)
 }
 
+func (c *connection) DisconnectForReconnect() {
+	c.client.Disconnect(100)
+	c.reconnect()
+}
+
 func (c *connection) Subscribe(topic string, handler MessageHandler) bool {
 	topicName := fmt.Sprintf("%s/%s", c.config.BaseTopic, topic)
 	if strings.HasPrefix(topic, c.config.BaseTopic) {

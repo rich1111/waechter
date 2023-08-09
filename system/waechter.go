@@ -1,7 +1,6 @@
 package system
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/mtrossbach/waechter/internal/config"
 	"github.com/mtrossbach/waechter/internal/log"
@@ -11,8 +10,6 @@ import (
 	"github.com/mtrossbach/waechter/system/device"
 	"github.com/mtrossbach/waechter/system/zone"
 	"golang.org/x/exp/maps"
-	"os"
-	"strings"
 	"sync"
 	"time"
 )
@@ -46,38 +43,40 @@ func NewWaechter() *Waechter {
 	w.loadDevices()
 	w.loadState()
 
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			if scanner.Err() != nil {
-				log.Error().Err(scanner.Err()).Msg("Could not read from stdin")
-				break
+	/*
+		go func() {
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				if scanner.Err() != nil {
+					log.Error().Err(scanner.Err()).Msg("Could not read from stdin")
+					break
+				}
+
+				cmdParts := strings.Split(strings.TrimSpace(scanner.Text()), " ")
+				cmd := strings.ToLower(cmdParts[0])
+				ok := false
+				switch cmd {
+				case "arm":
+					w.arm(systemDeviceId, arm.All)
+					ok = true
+				case "disarm":
+					if len(cmdParts) > 1 {
+						w.disarm(systemDeviceId, cmdParts[1])
+						ok = true
+					}
+				case "entry-delay":
+					if w.state.Armed() {
+						w.alarm(systemDeviceId, alarm.Burglar, true)
+						ok = true
+					}
+				}
+				if !ok {
+					log.Error().Str("cmd", cmd).Msg("Could not execute command.")
+				}
 			}
 
-			cmdParts := strings.Split(strings.TrimSpace(scanner.Text()), " ")
-			cmd := strings.ToLower(cmdParts[0])
-			ok := false
-			switch cmd {
-			case "arm":
-				w.arm(systemDeviceId, arm.All)
-				ok = true
-			case "disarm":
-				if len(cmdParts) > 1 {
-					w.disarm(systemDeviceId, cmdParts[1])
-					ok = true
-				}
-			case "entry-delay":
-				if w.state.Armed() {
-					w.alarm(systemDeviceId, alarm.Burglar, true)
-					ok = true
-				}
-			}
-			if !ok {
-				log.Error().Str("cmd", cmd).Msg("Could not execute command.")
-			}
-		}
-
-	}()
+		}()
+	*/
 	return &w
 }
 
@@ -137,7 +136,7 @@ func (w *Waechter) zoneForDeviceId(id device.Id) zone.Zone {
 	return *z
 }
 
-func (w *Waechter) deviceConnectorForId(id string) DeviceConnector {
+func (w *Waechter) DeviceConnectorForId(id string) DeviceConnector {
 	c, _ := wslice.FilterOne[DeviceConnector](w.deviceConnectors, func(i DeviceConnector) bool { return i.Id() == id })
 	return *c
 }
@@ -377,8 +376,8 @@ func (w *Waechter) DeviceListUpdated(connector DeviceConnector) {
 		} else {
 			// not existing device, new it, by Jack Chen
 			d := device.NewDevice(s.Id)
+			d.Spec = s
 			w.devices[d.Id] = &d
-			w.devices[d.Id].Spec = s
 		}
 		var sensors []string
 		var actors []string
@@ -393,7 +392,7 @@ func (w *Waechter) DeviceListUpdated(connector DeviceConnector) {
 
 	log.Info().Str("connector", connector.DisplayName()).Msg("Trying to activate devices")
 	for _, d := range w.devices {
-		if !d.Active && d.Id.Prefix() == connector.Id() {
+		if /*!d.Active &&*/ d.Id.Prefix() == connector.Id() {
 			err := connector.ActivateDevice(d.Id)
 			if err != nil {
 				device.DError(d).Err(err).Msg("✗ Could not activate device")
@@ -502,7 +501,7 @@ func (w *Waechter) notificationBeep(long bool) {
 	}
 	for _, d := range w.devices {
 		if wslice.Contains(d.Spec.Actors, a) {
-			if c := w.deviceConnectorForId(d.Id.Prefix()); c != nil {
+			if c := w.DeviceConnectorForId(d.Id.Prefix()); c != nil {
 				c.ControlActor(d.Id, a, nil)
 			}
 		}
@@ -511,7 +510,7 @@ func (w *Waechter) notificationBeep(long bool) {
 
 func (w *Waechter) updateActor(id device.Id, actor device.Actor, payload any) {
 	if d, ok := w.devices[id]; ok && d != nil && wslice.Contains(d.Spec.Actors, actor) {
-		if c := w.deviceConnectorForId(d.Id.Prefix()); c != nil {
+		if c := w.DeviceConnectorForId(d.Id.Prefix()); c != nil {
 			c.ControlActor(d.Id, actor, payload)
 		}
 	}
