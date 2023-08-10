@@ -141,6 +141,28 @@ func (w *Waechter) DeviceConnectorForId(id string) DeviceConnector {
 	return *c
 }
 
+func (w *Waechter) DeviceSensorValue(id device.Id, sensor device.Sensor) interface{} {
+	value := w.devices[id].State[sensor]
+
+	if v, ok := value.(device.MotionSensorValue); ok {
+		return v.Motion
+	} else if v, ok := value.(device.ContactSensorValue); ok {
+		return v.Contact
+	} else if v, ok := value.(device.SmokeSensorValue); ok {
+		return v.Smoke
+	} else if v, ok := value.(device.BatteryLevelSensorValue); ok {
+		return v.BatteryLevel
+	} else if v, ok := value.(device.LinkQualitySensorValue); ok {
+		return v.LinkQuality
+	} else if v, ok := value.(device.HumiditySensorValue); ok {
+		return v.Humidity
+	} else if v, ok := value.(device.TemperatureSensorValue); ok {
+		return v.Temperature
+	}
+
+	return nil
+}
+
 func (w *Waechter) DeliverSensorValue(id device.Id, sensor device.Sensor, value any) bool {
 	log.Debug().Str("id", string(id)).Str("sensor", string(sensor)).Msg("DeliverSensorValue")
 

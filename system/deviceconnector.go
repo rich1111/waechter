@@ -36,4 +36,6 @@ type Controller interface {
 	SystemState() State
 
 	DeviceConnectorForId(id string) DeviceConnector
+
+	DeviceSensorValue(id device.Id, sensor device.Sensor) interface{}
 }

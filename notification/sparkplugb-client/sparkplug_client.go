@@ -341,57 +341,60 @@ func getDeviceBirthMetrics(dev_spec device.Spec) []sparkplug.Metric {
 	ms = append(ms, m4)
 	ms = append(ms, m5)
 
+	id := dev_spec.Id
 	for _, s := range dev_spec.Sensors {
-		switch s {
-		case device.Humidity:
-			m := sparkplug.Metric{
-				Name:     "metric/humidity",
-				DataType: sparkplug.TypeFloat,
-				Value:    "0",
+		if v := sysController.DeviceSensorValue(id, s); v != nil {
+			switch s {
+			case device.Humidity:
+				m := sparkplug.Metric{
+					Name:     "metric/humidity",
+					DataType: sparkplug.TypeFloat,
+					Value:    fmt.Sprintf("%f", v.(float32)),
+				}
+				ms = append(ms, m)
+			case device.Temperature:
+				m := sparkplug.Metric{
+					Name:     "metric/temperature",
+					DataType: sparkplug.TypeFloat,
+					Value:    fmt.Sprintf("%f", v.(float32)),
+				}
+				ms = append(ms, m)
+			case device.MotionSensor:
+				m := sparkplug.Metric{
+					Name:     "metric/motion",
+					DataType: sparkplug.TypeBool,
+					Value:    strconv.FormatBool(v.(bool)),
+				}
+				ms = append(ms, m)
+			case device.ContactSensor:
+				m := sparkplug.Metric{
+					Name:     "metric/contact",
+					DataType: sparkplug.TypeBool,
+					Value:    strconv.FormatBool(v.(bool)),
+				}
+				ms = append(ms, m)
+			case device.SmokeSensor:
+				m := sparkplug.Metric{
+					Name:     "metric/smoke",
+					DataType: sparkplug.TypeBool,
+					Value:    strconv.FormatBool(v.(bool)),
+				}
+				ms = append(ms, m)
+			case device.BatteryLevelSensor:
+				m := sparkplug.Metric{
+					Name:     "Battery Level",
+					DataType: sparkplug.TypeFloat,
+					Value:    fmt.Sprintf("%f", v.(float32)),
+				}
+				ms = append(ms, m)
+			case device.LinkQualitySensor:
+				m := sparkplug.Metric{
+					Name:     "Link Quality",
+					DataType: sparkplug.TypeFloat,
+					Value:    fmt.Sprintf("%f", v.(float32)),
+				}
+				ms = append(ms, m)
 			}
-			ms = append(ms, m)
-		case device.Temperature:
-			m := sparkplug.Metric{
-				Name:     "metric/temperature",
-				DataType: sparkplug.TypeFloat,
-				Value:    "0",
-			}
-			ms = append(ms, m)
-		case device.MotionSensor:
-			m := sparkplug.Metric{
-				Name:     "metric/motion",
-				DataType: sparkplug.TypeBool,
-				Value:    "false",
-			}
-			ms = append(ms, m)
-		case device.ContactSensor:
-			m := sparkplug.Metric{
-				Name:     "metric/contact",
-				DataType: sparkplug.TypeBool,
-				Value:    "true",
-			}
-			ms = append(ms, m)
-		case device.SmokeSensor:
-			m := sparkplug.Metric{
-				Name:     "metric/smoke",
-				DataType: sparkplug.TypeBool,
-				Value:    "false",
-			}
-			ms = append(ms, m)
-		case device.BatteryLevelSensor:
-			m := sparkplug.Metric{
-				Name:     "Battery Level",
-				DataType: sparkplug.TypeFloat,
-				Value:    "100",
-			}
-			ms = append(ms, m)
-		case device.LinkQualitySensor:
-			m := sparkplug.Metric{
-				Name:     "Link Quality",
-				DataType: sparkplug.TypeFloat,
-				Value:    "255",
-			}
-			ms = append(ms, m)
 		}
 	}
 
