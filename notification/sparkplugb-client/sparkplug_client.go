@@ -270,6 +270,8 @@ var reconnectingHandler mqtt.ReconnectHandler = func(client mqtt.Client, options
 	}
 	options.WillPayload = wp
 
+	// here want to send Node Rebirth
+	sendingNodeBirth()
 	// reconnect Zigbee2Mqtt for sending devices list again
 	reconnectZigbee2Mqtt()
 }
